@@ -4,11 +4,18 @@ var expect = require("expect");
 var app = require("../server");
 var Todo = require("../models/todos");
 
+const todos = [
+  {text: "Initial test todo text"},
+  {text: "Some other text"}
+];
+
 beforeEach(done => {
-  Todo.remove({}).then(() => done());
+  Todo.remove({}).then(() => {
+    return Todo.insertMany(todos);
+  }).then(() => done());
 });
 
-describe("Post /todos", () => {
+describe("POST /todos", () => {
   it("should create a new todo", (done) => {
     var text = "Some test todo text ";
     var expectedText = text.trim();
@@ -23,7 +30,7 @@ describe("Post /todos", () => {
         if (err) {
           return done(err);
         }
-        Todo.find().then(todos => {
+        Todo.find({text: expectedText}).then(todos => {
           expect(todos.length).toEqual(1);
           expect(todos[0].text).toEqual(expectedText);
           done();
@@ -33,7 +40,7 @@ describe("Post /todos", () => {
       });
   });
 
-  it("should not create a new todo with invalid data", () => {
+  it("should not create a new todo with invalid data", (done) => {
     request(app)
       .post("/todos")
       .send({})
@@ -46,11 +53,23 @@ describe("Post /todos", () => {
           return done(err);
         }
         Todo.find().then(todos => {
-          expect(todos.length).toEqual(0);
+          expect(todos.length).toEqual(2);
           done();
         }).catch(err => {
           done(err);
         });
       });
+  });
+});
+
+describe("GET /todos", () => {
+  it("should get all todos", done => {
+    request(app)
+      .get("/todos")
+      .expect(200)
+      .expect(res => {
+        expect(res.body.todos.length).toEqual(2);
+      })
+      .end(done);
   });
 });
